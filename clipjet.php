@@ -95,7 +95,7 @@ function cj_init() {
 
 function cj_meta_box_add()  
 {  
-    add_meta_box( 'add-network-meta-box', 'Ad Network Tag', 'cj_meta_box_cb', 'post', 'normal', 'high' );  
+    add_meta_box( 'add-network-meta-box', 'Clipjet Tag', 'cj_meta_box_cb', 'post', 'normal', 'high' );  
 }  
 
 
@@ -174,14 +174,16 @@ class ClipjetWidget extends WP_Widget {
         $values = get_post_custom( $post->ID );
         $params = array(
             'email'       => get_option('clipjet_email'),
-            'category_id' => $values['clipjet-tag'][0],
-            'country_iso' => substr($_SERVER["HTTP_ACCEPT_LANGUAGE"],2,2)
+            'category_id' => $tagId,
+            'country_iso' => 'US'
         );
 
         $response = do_get_request('http://www.clipjet.co/videos/show', $params);
         preg_match('![?&]{1}v=([^&]+)!', $response->video_url . '&', $m);    
         $video_id = $m[1];
         
+        //var_dump($params); exit();
+        //error_log($response->video_url);
         if(!$video_id)
             return;
         
@@ -196,7 +198,7 @@ class ClipjetWidget extends WP_Widget {
         </div>';
         
         echo $before_widget;
-        echo $before_title . ($title ? $title : 'Clipjet') . $after_title. $out;
+        echo $before_title . $title . $after_title. $out;
         echo $after_widget;
     } 
   }
