@@ -3,7 +3,7 @@
 Plugin Name: Clipjet
 Plugin URI: http://www.clipjet.co
 Description: Clipjet rockets your videos to thousands of views.
-Version: 0.1
+Version: 0.2
 Author: The Awesome Clipjet Team
 License: GPL2
 */
@@ -28,7 +28,7 @@ add_action('add_meta_boxes', 'cj_meta_box_add' );
 add_action('save_post', 'cj_meta_box_save' ); 
 add_action('admin_init', 'cj_admin_init');
 add_action('admin_menu', 'cj_plugin_menu' );
-add_filter('the_content', 'cj_show_video' );  
+//add_filter('the_content', 'cj_show_video' );  
 
 function do_get_request($url, $params, $verb = 'GET', $format = 'json')
 
@@ -101,13 +101,10 @@ function cj_meta_box_add()
 
 function cj_meta_box_cb( $post )
 {
-    
+    //call api
     $tags = do_get_request('http://www.clipjet.co/categories', array());
-    
-    //var_dump($tags); exit();
-    
     $values = get_post_custom( $post->ID );
-    $selected = isset( $values['clipjet-tag'] ) ? esc_attr( $values['clipjet-tag'][0] ) : '';
+    $selected = isset( $values['clipjet-tag'] ) ? esc_attr( $values['clipjet-tag'][0] ) : get_option('clipjet_tag');
     	?>
 	
 	<p>
@@ -144,67 +141,6 @@ function cj_meta_box_save( $post_id )
     update_post_meta( $post_id, 'my_meta_box_check', $chk );  
 }  
 
-
-function cj_show_video( $content )  
-{  
-    // We only want this on single posts, bail if we're not in a single post  
-    if( !is_single() ) return $content;  
-      
-    // We're in the loop, so we can grab the $post variable  
-    global $post;  
-      
-    $tagId = get_post_meta( $post->ID, 'clipjet-tag', true );  
-
-    // Bail if we don't have a quote;  
-    if( empty( $tagId ) ) return $content;  
-    
-    //get video url from server
-    
-    $values = get_post_custom( $post->ID );
-    
-    $params = array(
-        'email'       => get_option('clipjet_email'),
-        //'category_id' => $values['clipjet-tag'][0],
-        'category_id' => 1,
-        'country_iso' => 'cl'
-    );
-    
-    //var_dump($params); exit();
-    
-    $response = do_get_request('http://www.clipjet.co/videos/show', $params);
-    
-    //echo  $response->video_url;exit();
-    
-    preg_match('![?&]{1}v=([^&]+)!', $response->video_url . '&', $m);
-    
-    $video_id = $m[1];
-    
-    //echo $video_id; exit();
-    
-    $videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0';
-
-    //var_dump($videoUrl); 
-    
-    //error_log('videourl:'.$videoUrl);
-    //exit();
-    //$videoUrl = 'http://www.youtube.com/embed/q1dpQKntj_w?enablejsapi=1&rel=0&showinfo=0';
-      
-    //$out = wp_oembed_get($videoUrl, array('width' => 100)); 
-    //$out = wp_oembed_get($videoUrl, array('id' => 'clipjetvideo')); 
-    $width = get_option('medium_size_w') ? get_option('medium_size_w') : 600;
-    $height = get_option('medium_size_h') ? get_option('medium_size_h') : 600;
-        
-    $out = '<div id="clipjet-hit" style="visibility:hidden;width:0px;height:0px;"></div>
-        <div id="clipjet-advertiser" style="visibility:hidden;width:0px;height:0px;">'.$response->advertiser_id.'</div>
-        <div id="clipjet-email" style="visibility:hidden;width:0px;height:0px;">'.get_option('clipjet_email').'</div>
-        <div style="margin:0 auto 0 auto; width:'.$width.'px;">
-            <iframe id="clipjet-video" type="text/html" style="width:'.$width.'px;height:'.$height.'px;" src="'.$videoUrl.'" frameborder="0" allowfullscreen ;noCachePlease='.uniqid().'></iframe>
-        </div>';
-    //$out .= '<script>function onYouTubePlayerReady(playerId) {ytplayer = document.getElementById("myytplayer"); alert(1);}</script>';
-    
-    return $out . $content;  
-}  
-
 function cj_plugin_menu() {
 	add_options_page( 'Clipjet Options', 'Clipjet', 'manage_options', 'clipjet', 'cj_plugin_options' );
 }
@@ -218,4 +154,71 @@ function cj_plugin_options() {
 
 function cj_admin_init() {
     register_setting('clipjet-group', 'clipjet_email');
+    register_setting('clipjet-group', 'clipjet_tag');
+}
+
+class ClipjetWidget extends WP_Widget {
+  function ClipjetWidget() {
+    parent::WP_Widget( false, $name = 'Clipjet' );
+  }
+ 
+  function widget( $args, $instance ) {
+    extract( $args );
+    $title = apply_filters( 'widget_title', $instance['title'] );
+    
+    // We're in the loop, so we can grab the $post variable  
+    global $post;  
+    $tagId = get_post_meta( $post->ID, 'clipjet-tag', true ) ? get_post_meta( $post->ID, 'clipjet-tag', true ) : get_option('clipjet_tag');  
+
+    if($tagId) {
+        $values = get_post_custom( $post->ID );
+        $params = array(
+            'email'       => get_option('clipjet_email'),
+            'category_id' => $values['clipjet-tag'][0],
+            'country_iso' => substr($_SERVER["HTTP_ACCEPT_LANGUAGE"],2,2)
+        );
+
+        $response = do_get_request('http://www.clipjet.co/videos/show', $params);
+        preg_match('![?&]{1}v=([^&]+)!', $response->video_url . '&', $m);    
+        $video_id = $m[1];
+        
+        if(!$video_id)
+            return;
+        
+        $videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0';
+        $width = get_option('small_size_w') ? get_option('small_size_w') : 200;
+        $height = get_option('small_size_h') ? get_option('small_size_h') : 200;
+        $out = '<div id="clipjet-hit" style="visibility:hidden;width:0px;height:0px;"></div>
+        <div id="clipjet-advertiser" style="visibility:hidden;width:0px;height:0px;">'.$response->advertiser_id.'</div>
+        <div id="clipjet-email" style="visibility:hidden;width:0px;height:0px;">'.get_option('clipjet_email').'</div>
+        <div style="margin:0 auto 0 auto; width:'.$width.'px;">
+            <iframe id="clipjet-video" type="text/html" style="width:'.$width.'px;height:'.$height.'px;" src="'.$videoUrl.'" frameborder="0" allowfullscreen ;noCachePlease='.uniqid().'></iframe>
+        </div>';
+        
+        echo $before_widget;
+        echo $before_title . ($title ? $title : 'Clipjet') . $after_title. $out;
+        echo $after_widget;
+    } 
+  }
+ 
+  function update( $new_instance, $old_instance ) {
+    return $new_instance;
+  }
+ 
+  function form( $instance ) {
+    $title = esc_attr( $instance['title'] );
+    ?>
+ 
+    <p>
+      <label for="<?php echo $this->get_field_id( 'title' ); ?>"><?php _e( 'Title:' ); ?>
+      <input class="widefat" id="<?php echo $this->get_field_id( 'title' ); ?>" name="<?php echo $this->get_field_name( 'title' ); ?>" type="text" value="<?php echo $title; ?>" />
+      </label>
+    </p>    
+    <?php
+  }
+}
+ 
+add_action( 'widgets_init', 'MyWidgetInit' );
+function MyWidgetInit() {
+  register_widget( 'ClipjetWidget' );
 }
