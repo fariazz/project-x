@@ -102,7 +102,7 @@ function cj_meta_box_add()
 function cj_meta_box_cb( $post )
 {
     
-    $tags = do_get_request('http://frozen-dawn-4832.herokuapp.com/categories', array());
+    $tags = do_get_request('http://www.clipjet.co/categories', array());
     
     //var_dump($tags); exit();
     
@@ -171,7 +171,7 @@ function cj_show_video( $content )
     
     //var_dump($params); exit();
     
-    $response = do_get_request('http://frozen-dawn-4832.herokuapp.com/videos/show', $params);
+    $response = do_get_request('http://www.clipjet.co/videos/show', $params);
     
     //echo  $response->video_url;exit();
     

@@ -89,7 +89,7 @@ function makeid()
     var text = "";
     var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-    for( var i=0; i < 5; i++ )
+    for( var i=0; i < 25; i++ )
         text += possible.charAt(Math.floor(Math.random() * possible.length));
 
     return text;
@@ -99,14 +99,22 @@ var token;
 
 function notifyVideoStarted() {
     var iframe = document.createElement('iframe');
-    token = makeid();
-    iframe.src = "http://192.168.104.182:3000/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+token;
+    var body = document.getElementsByTagName('body');
     
+    token = makeid();
+    iframe.src = "http://www.clipjet.co/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+token;
+    body[0].appendChild(iframe);
+    //alert('started');
+    //alert(iframe);
 }
 
 function notifyVideoFinished() {
     var iframe = document.createElement('iframe');
-    iframe.src = "http://192.168.104.182:3000/hit/update?token="+token;
+    var body = document.getElementsByTagName('body');
     
+    iframe.src = "http://www.clipjet.co/hit/update?token="+token;
+    body[0].appendChild(iframe);
+    //alert('ended');
+    //alert(iframe);
 }
 
