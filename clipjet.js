@@ -43,7 +43,6 @@ var YT_ready = (function() {
 })();
 // This function will be called when the API is fully loaded
 function onYouTubePlayerAPIReady() {
-    console.log(player);
     YT_ready(true)
 }
 
@@ -58,6 +57,8 @@ function onYouTubePlayerAPIReady() {
 var player; //Define a player object, to enable later function calls, without
             // having to create a new class instance again.
 
+var started = false;
+
 // Add function to execute when the API is ready
 YT_ready(function(){
     var frameID = getFrameID("clipjet-video");
@@ -71,9 +72,41 @@ YT_ready(function(){
 });
 
 function checkVideoStatus(event) {
-    if(event.data === 0) {
-        //call api here
-        alert('Video ended playing, API call here');
+       
+    if(event.data === 0) {        
+        //call api here for finished video
+        notifyVideoFinished();
+    }
+    else if(event.data === 1 && !started) {
+        started = true;   
+        notifyVideoStarted();
     }
     
 }
+
+function makeid()
+{
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    for( var i=0; i < 5; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+    return text;
+}
+
+var token;
+
+function notifyVideoStarted() {
+    var iframe = document.createElement('iframe');
+    token = makeid();
+    iframe.src = "http://192.168.104.182:3000/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+token;
+    
+}
+
+function notifyVideoFinished() {
+    var iframe = document.createElement('iframe');
+    iframe.src = "http://192.168.104.182:3000/hit/update?token="+token;
+    
+}
+
