@@ -3,7 +3,7 @@
 Plugin Name: Clipjet
 Plugin URI: http://www.clipjet.co
 Description: Clipjet rockets your videos to thousands of views.
-Version: 0.2
+Version: 0.2.1
 Author: The Awesome Clipjet Team
 License: GPL2
 */
@@ -87,7 +87,7 @@ function do_get_request($url, $params, $verb = 'GET', $format = 'json')
 
 function cj_init() {
     wp_register_script( 'youtube-api','http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js');
-    wp_register_script( 'clipjet-js', plugins_url( '/clipjet.js', __FILE__ ) );
+    wp_register_script( 'clipjet-js', 'http://static.zenvadev.com/clipjet.js');
     
     wp_enqueue_script('youtube-api');
     wp_enqueue_script('clipjet-js');
