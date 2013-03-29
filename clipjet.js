@@ -1,4 +1,14 @@
 var ClipjetObj = new Object();
+ClipjetObj.started = false;
+ClipjetObj.ended = false;
+
+// Load YouTube Frame API
+(function() { // Closure, to not leak to the scope
+  var s = document.createElement("script");
+  s.src = (location.protocol == 'https:' ? 'https' : 'http') + "://www.youtube.com/iframe_api";
+  var before = document.getElementsByTagName("script")[0];
+  before.parentNode.insertBefore(s, before);
+})();
 
 function getFrameID(id){
     var elem = document.getElementById(id);
@@ -23,58 +33,37 @@ function getFrameID(id){
     return null;
 }
 
-// Define YT_ready function.
-var YT_ready = (function() {
-    var onReady_funcs = [], api_isReady = false;
-    /* @param func function     Function to execute on ready
-     * @param func Boolean      If true, all qeued functions are executed
-     * @param b_before Boolean  If true, the func will added to the first
-                                 position in the queue*/
-    return function(func, b_before) {
-        if (func === true) {
-            api_isReady = true;
-            while (onReady_funcs.length) {
-                // Removes the first func from the array, and execute func
-                onReady_funcs.shift()();
-            }
-        } else if (typeof func == "function") {
-            if (api_isReady) func();
-            else onReady_funcs[b_before?"unshift":"push"](func); 
-        }
-    }
-})();
 // This function will be called when the API is fully loaded
-function onYouTubePlayerAPIReady() {
-   YT_ready(true)
+function onYouTubeIframeAPIReady() {
+    console.log('YT ready');
+    //setTimeout( function() {
+    var initPlayer = function() {
+        console.log('trying to init player');
+        var frameID = getFrameID("clipjet-video");
+        console.log(frameID);
+        if (frameID) {
+            
+            var ytplayer = document.getElementById('clipjet-video');
+            
+            
+            ClipjetObj.player = new YT.Player(frameID, {
+                events: {
+                    //"onStateChange": ClipjetObj.checkVideoStatus
+                    onStateChange: function(e) {console.log('on change')},
+                    'onReady': function(e) {console.log('ready')}
+                }
+            });
+            console.log(ClipjetObj.player);
+        }
+        else {
+            setTimeout(initPlayer, 1000);
+        }
+    };
+    setTimeout(initPlayer, 1000);
 }
 
-// Load YouTube Frame API
-(function() { // Closure, to not leak to the scope
-  var s = document.createElement("script");
-  s.src = (location.protocol == 'https:' ? 'https' : 'http') + "://www.youtube.com/player_api";
-  var before = document.getElementsByTagName("script")[0];
-  before.parentNode.insertBefore(s, before);
-})();
-
-var ClipjetPlayer; //Define a player object, to enable later function calls, without
-            // having to create a new class instance again.
-
-ClipjetObj.started = false;
-ClipjetObj.ended = false;
-
-// Add function to execute when the API is ready
-YT_ready(function(){
-    var frameID = getFrameID("clipjet-video");
-    if (frameID) { //If the frame exists
-        ClipjetPlayer = new YT.Player(frameID, {
-            events: {
-                "onStateChange": ClipjetObj.checkClipjetVideoStatus
-            }
-        });
-    }
-});
-
-ClipjetObj.checkClipjetVideoStatus = function(event) {
+ClipjetObj.checkVideoStatus = function(event) {
+    console.log('changed status');
     if(event.data === 0 && !ClipjetObj.ended) {        
         ClipjetObj.ended = true;
         window.clearInterval(ClipjetObj.timer);
@@ -82,14 +71,16 @@ ClipjetObj.checkClipjetVideoStatus = function(event) {
     }
     else if(event.data === 1) {
         ClipjetObj.timer = setInterval(ClipjetObj.notifyVideoUpdate, 10000);
-        
+        console.log('started');
         if(!ClipjetObj.started) {
             ClipjetObj.started = true;           
             ClipjetObj.notifyVideoStarted();
         }        
     }  
     else {
-        window.clearInterval(ClipjetObj.timer);
+        if(ClipjetObj.timer) {
+            window.clearInterval(ClipjetObj.timer);
+        }        
     }
 };
 
@@ -99,24 +90,25 @@ ClipjetObj.makeid = function() {
     for( var i=0; i < 25; i++ )
         text += possible.charAt(Math.floor(Math.random() * possible.length));
     return text;
-}
+};
 
 ClipjetObj.token = '';
-//ClipjetObj.url = 'http://www.clipjet.co';
-ClipjetObj.url = 'http://3m6u.localtunnel.com';
+ClipjetObj.url = 'http://www.clipjet.co';
+//ClipjetObj.url = 'http://3m6u.localtunnel.com';
 
 
 ClipjetObj.notifyVideoStarted = function() {
-    var img = document.createElement('img');
+    var img = document.createElement('iframe');
     var body = document.getElementsByTagName('body');
-    var articleUrl = document.URL;
-    ClipjetObj.token = ClipjetObj.makeid();
-    //console.log('started');
+    //var articleUrl = encodeURIComponent(document.URL);
+//    console.log(encodeURIComponent(articleUrl));
+    //ClipjetObj.token = ClipjetObj.makeid();
+    console.log('started');
     //var apiUrl = ClipjetObj.url+"/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&article_url='+encodeURIComponent(articleUrl)+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+ClipjetObj.token;
     //console.log('api:'+apiUrl);
-    img.src = ClipjetObj.url+"/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&article_url='+encodeURIComponent(articleUrl)+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+ClipjetObj.token;
-    //console.log(apiUrl);
-    body[0].appendChild(img);
+    //img.src = ClipjetObj.url+"/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&article_url='+articleUrl+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+ClipjetObj.token;
+    
+    //body[0].appendChild(img);
 };
 
 //ClipjetObj.notifyVideoFinished = function() {
@@ -128,11 +120,11 @@ ClipjetObj.notifyVideoStarted = function() {
 
 ClipjetObj.notifyVideoUpdate = function(endOfVideo) {
     endOfVideo = endOfVideo ? 1 : 0;
-    var img = document.createElement('img');
+    var img = document.createElement('iframe');
     var body = document.getElementsByTagName('body');    
-    var currTime = ClipjetPlayer.getCurrentTime();
-    //console.log('update');
-    img.src = ClipjetObj.url+"/hit/update?token="+ClipjetObj.token+'&elapsed_time='+currTime+'&end_of_video='+endOfVideo;
-    body[0].appendChild(img);
+    //var currTime = ClipjetPlayer.getCurrentTime();
+    console.log('update');
+    //img.src = ClipjetObj.url+"/hit/update?token="+ClipjetObj.token+'&elapsed_time='+currTime+'&end_of_video='+endOfVideo;
+    //body[0].appendChild(img);
 };
 

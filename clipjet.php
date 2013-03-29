@@ -30,6 +30,18 @@ add_action('admin_init', 'cj_admin_init');
 add_action('admin_menu', 'cj_plugin_menu' );
 //add_filter('the_content', 'cj_show_video' );  
 
+function curPageURL() {
+ $pageURL = 'http';
+ if ($_SERVER["HTTPS"] == "on") {$pageURL .= "s";}
+ $pageURL .= "://";
+ if ($_SERVER["SERVER_PORT"] != "80") {
+  $pageURL .= $_SERVER["SERVER_NAME"].":".$_SERVER["SERVER_PORT"].$_SERVER["REQUEST_URI"];
+ } else {
+  $pageURL .= $_SERVER["SERVER_NAME"].$_SERVER["REQUEST_URI"];
+ }
+ return $pageURL;
+}
+
 function do_get_request($url, $params, $verb = 'GET', $format = 'json')
 
   {
@@ -86,8 +98,11 @@ function do_get_request($url, $params, $verb = 'GET', $format = 'json')
 
 
 function cj_init() {
+    
     wp_register_script( 'youtube-api','http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js');
-    wp_register_script( 'clipjet-js', 'http://static.zenvadev.com/clipjet.js');
+    //wp_register_script( 'clipjet-js', 'http://static.zenvadev.com/clipjet.js');
+    wp_register_script( 'clipjet-js', plugins_url( '/clipjet.js', __FILE__ ) );
+    
     
     wp_enqueue_script('youtube-api');
     wp_enqueue_script('clipjet-js');
@@ -187,16 +202,17 @@ class ClipjetWidget extends WP_Widget {
         if(!$video_id)
             return;
         
-        $videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0';
+        $videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0&origin='.curPageURL();
         $width = get_option('small_size_w') ? get_option('small_size_w') : 200;
         $height = get_option('small_size_h') ? get_option('small_size_h') : 200;
         $out = '<div id="clipjet-hit" style="visibility:hidden;width:0px;height:0px;"></div>
         <div id="clipjet-advertiser" style="visibility:hidden;width:0px;height:0px;">'.$response->advertiser_id.'</div>
         <div id="clipjet-email" style="visibility:hidden;width:0px;height:0px;">'.get_option('clipjet_email').'</div>
         <div style="margin:0 auto 0 auto; width:'.$width.'px;">
-            <iframe id="clipjet-video" type="text/html" style="width:'.$width.'px;height:'.$height.'px;" src="'.$videoUrl.'" frameborder="0" allowfullscreen ;noCachePlease='.uniqid().'></iframe>
+            <iframe id="clipjet-video" name="clipjet-video" type="text/html" style="width:'.$width.'px;height:'.$height.'px;" src="'.$videoUrl.'" frameborder="0" allowfullscreen ;noCachePlease='.uniqid().'></iframe>
         </div>';
-        
+        //            <iframe id="clipjet-video" type="text/html" style="width:'.$width.'px;height:'.$height.'px;" src="'.$videoUrl.'" version="3" frameborder="0" origin="'.curPageURL().'" enablejsapi="1" allowfullscreen ;noCachePlease='.uniqid().'></iframe>
+
         echo $before_widget;
         echo $before_title . $title . $after_title. $out;
         echo $after_widget;
