@@ -5,7 +5,7 @@ ClipjetObj.ended = false;
 // Load YouTube Frame API
 (function() { // Closure, to not leak to the scope
   var s = document.createElement("script");
-  s.src = (location.protocol == 'https:' ? 'https' : 'http') + "://www.youtube.com/iframe_api";
+  s.src = (location.protocol == 'https:' ? 'https' : 'http') + "://www.youtube.com/player_api";
   var before = document.getElementsByTagName("script")[0];
   before.parentNode.insertBefore(s, before);
 })();
@@ -34,7 +34,7 @@ function getFrameID(id){
 }
 
 // This function will be called when the API is fully loaded
-function onYouTubeIframeAPIReady() {
+function onYouTubePlayerAPIReady() {
     console.log('YT ready');
     //setTimeout( function() {
     var initPlayer = function() {
@@ -49,7 +49,7 @@ function onYouTubeIframeAPIReady() {
             ClipjetObj.player = new YT.Player(frameID, {
                 events: {
                     //"onStateChange": ClipjetObj.checkVideoStatus
-                    onStateChange: function(e) {console.log('on change')},
+                    onStateChange: ClipjetObj.checkVideoStatus,
                     'onReady': function(e) {console.log('ready')}
                 }
             });
@@ -59,11 +59,12 @@ function onYouTubeIframeAPIReady() {
             setTimeout(initPlayer, 1000);
         }
     };
-    setTimeout(initPlayer, 1000);
+    initPlayer();
 }
 
 ClipjetObj.checkVideoStatus = function(event) {
     console.log('changed status');
+    console.log(event.data);
     if(event.data === 0 && !ClipjetObj.ended) {        
         ClipjetObj.ended = true;
         window.clearInterval(ClipjetObj.timer);
@@ -100,15 +101,11 @@ ClipjetObj.url = 'http://www.clipjet.co';
 ClipjetObj.notifyVideoStarted = function() {
     var img = document.createElement('iframe');
     var body = document.getElementsByTagName('body');
-    //var articleUrl = encodeURIComponent(document.URL);
-//    console.log(encodeURIComponent(articleUrl));
-    //ClipjetObj.token = ClipjetObj.makeid();
+    var articleUrl = encodeURIComponent(document.URL);
+    ClipjetObj.token = ClipjetObj.makeid();
     console.log('started');
-    //var apiUrl = ClipjetObj.url+"/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&article_url='+encodeURIComponent(articleUrl)+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+ClipjetObj.token;
-    //console.log('api:'+apiUrl);
-    //img.src = ClipjetObj.url+"/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&article_url='+articleUrl+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+ClipjetObj.token;
-    
-    //body[0].appendChild(img);
+    img.src = ClipjetObj.url+"/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&article_url='+articleUrl+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+ClipjetObj.token;
+    body[0].appendChild(img);
 };
 
 //ClipjetObj.notifyVideoFinished = function() {
@@ -122,9 +119,9 @@ ClipjetObj.notifyVideoUpdate = function(endOfVideo) {
     endOfVideo = endOfVideo ? 1 : 0;
     var img = document.createElement('iframe');
     var body = document.getElementsByTagName('body');    
-    //var currTime = ClipjetPlayer.getCurrentTime();
+    var currTime = ClipjetObj.player.getCurrentTime();
     console.log('update');
-    //img.src = ClipjetObj.url+"/hit/update?token="+ClipjetObj.token+'&elapsed_time='+currTime+'&end_of_video='+endOfVideo;
-    //body[0].appendChild(img);
+    img.src = ClipjetObj.url+"/hit/update?token="+ClipjetObj.token+'&elapsed_time='+currTime+'&end_of_video='+endOfVideo;
+    body[0].appendChild(img);
 };
 

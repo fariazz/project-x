@@ -35,9 +35,9 @@ function curPageURL() {
  if ($_SERVER["HTTPS"] == "on") {$pageURL .= "s";}
  $pageURL .= "://";
  if ($_SERVER["SERVER_PORT"] != "80") {
-  $pageURL .= $_SERVER["SERVER_NAME"].":".$_SERVER["SERVER_PORT"].$_SERVER["REQUEST_URI"];
+  $pageURL .= $_SERVER["SERVER_NAME"].":".$_SERVER["SERVER_PORT"];//.$_SERVER["REQUEST_URI"];
  } else {
-  $pageURL .= $_SERVER["SERVER_NAME"].$_SERVER["REQUEST_URI"];
+  $pageURL .= $_SERVER["SERVER_NAME"];//.$_SERVER["REQUEST_URI"];
  }
  return $pageURL;
 }
@@ -202,7 +202,8 @@ class ClipjetWidget extends WP_Widget {
         if(!$video_id)
             return;
         
-        $videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0&origin='.curPageURL();
+        $videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0&origin='.urlencode(curPageURL());
+        //$videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0';
         $width = get_option('small_size_w') ? get_option('small_size_w') : 200;
         $height = get_option('small_size_h') ? get_option('small_size_h') : 200;
         $out = '<div id="clipjet-hit" style="visibility:hidden;width:0px;height:0px;"></div>
