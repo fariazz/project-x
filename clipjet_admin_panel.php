@@ -2,8 +2,9 @@
     //call api
     $tags = do_get_request('http://www.clipjet.co/categories', array());
     //$selected = isset(get_option('clipjet_tag')) ? (get_option('clipjet_tag')) : '';
-?>	
+?>  
 <div class="wrap"> 
+    <?php screen_icon(); ?>
     <h2>Clipjet Options</h2> 
     <form method="post" action="options.php"> 
         <?php @settings_fields('clipjet-group'); ?> 

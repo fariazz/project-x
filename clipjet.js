@@ -2,6 +2,10 @@ var ClipjetObj = new Object();
 ClipjetObj.started = false;
 ClipjetObj.ended = false;
 
+ClipjetObj.isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+ClipjetObj.isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+ClipjetObj.isWebkit = ClipjetObj.isChrome || ClipjetObj.isSafari;
+
 // Load YouTube Frame API
 (function() { // Closure, to not leak to the scope
   var s = document.createElement("script");
@@ -50,7 +54,7 @@ function onYouTubePlayerAPIReady() {
                 events: {
                     //"onStateChange": ClipjetObj.checkVideoStatus
                     onStateChange: ClipjetObj.checkVideoStatus,
-                    'onReady': function(e) {console.log('ready')}
+                    onReady: function(e) {console.log('ready')}
                 }
             });
             console.log(ClipjetObj.player);
@@ -67,12 +71,17 @@ ClipjetObj.checkVideoStatus = function(event) {
     console.log(event.data);
     if(event.data === 0 && !ClipjetObj.ended) {        
         ClipjetObj.ended = true;
-        window.clearInterval(ClipjetObj.timer);
+        
+        if(!ClipjetObj.isWebkit) {
+            window.clearInterval(ClipjetObj.timer);
+        }
         ClipjetObj.notifyVideoUpdate(1);
     }
     else if(event.data === 1) {
-        ClipjetObj.timer = setInterval(ClipjetObj.notifyVideoUpdate, 10000);
-        console.log('started');
+        if(!ClipjetObj.isWebkit) {
+            ClipjetObj.timer = setInterval(ClipjetObj.notifyVideoUpdate, 10000);
+        }
+        
         if(!ClipjetObj.started) {
             ClipjetObj.started = true;           
             ClipjetObj.notifyVideoStarted();
@@ -99,11 +108,12 @@ ClipjetObj.url = 'http://www.clipjet.co';
 
 
 ClipjetObj.notifyVideoStarted = function() {
-    var img = document.createElement('iframe');
+    var img = document.createElement('img');
     var body = document.getElementsByTagName('body');
     var articleUrl = encodeURIComponent(document.URL);
     ClipjetObj.token = ClipjetObj.makeid();
     console.log('started');
+    img.setAttribute('style','visibility:hidden;');
     img.src = ClipjetObj.url+"/hit/create?email="+document.getElementById("clipjet-email").innerHTML+'&article_url='+articleUrl+'&advertiser_id='+document.getElementById("clipjet-advertiser").innerHTML+'&token='+ClipjetObj.token;
     body[0].appendChild(img);
 };
@@ -117,11 +127,17 @@ ClipjetObj.notifyVideoStarted = function() {
 
 ClipjetObj.notifyVideoUpdate = function(endOfVideo) {
     endOfVideo = endOfVideo ? 1 : 0;
-    var img = document.createElement('iframe');
+    var img = document.createElement('img');
     var body = document.getElementsByTagName('body');    
     var currTime = ClipjetObj.player.getCurrentTime();
     console.log('update');
+    img.setAttribute('style','visibility:hidden;');
     img.src = ClipjetObj.url+"/hit/update?token="+ClipjetObj.token+'&elapsed_time='+currTime+'&end_of_video='+endOfVideo;
     body[0].appendChild(img);
 };
 
+window.onbeforeunload = function() {
+    if(!ClipjetObj.ended) {
+        ClipjetObj.notifyVideoUpdate();
+    }    
+};

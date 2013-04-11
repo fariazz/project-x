@@ -3,7 +3,7 @@
 Plugin Name: Clipjet
 Plugin URI: http://www.clipjet.co
 Description: Clipjet rockets your videos to thousands of views.
-Version: 0.2.1
+Version: 0.2.2
 Author: The Awesome Clipjet Team
 License: GPL2
 */
@@ -30,78 +30,11 @@ add_action('admin_init', 'cj_admin_init');
 add_action('admin_menu', 'cj_plugin_menu' );
 //add_filter('the_content', 'cj_show_video' );  
 
-function curPageURL() {
- $pageURL = 'http';
- if ($_SERVER["HTTPS"] == "on") {$pageURL .= "s";}
- $pageURL .= "://";
- if ($_SERVER["SERVER_PORT"] != "80") {
-  $pageURL .= $_SERVER["SERVER_NAME"].":".$_SERVER["SERVER_PORT"];//.$_SERVER["REQUEST_URI"];
- } else {
-  $pageURL .= $_SERVER["SERVER_NAME"];//.$_SERVER["REQUEST_URI"];
- }
- return $pageURL;
-}
-
-function do_get_request($url, $params, $verb = 'GET', $format = 'json')
-
-  {
-  $cparams = array(
-    'http' => array(
-      'method' => $verb,
-      'ignore_errors' => true
-    )
-  );
-  if ($params !== null) {
-    $params = http_build_query($params);
-    if ($verb == 'POST') {
-      $cparams['http']['content'] = $params;
-    } else {
-      $url .= '?' . $params;
-    }
-  }
-
-  $context = stream_context_create($cparams);
-  $fp = fopen($url, 'rb', false, $context);
-  if (!$fp) {
-    $res = false;
-  } else {
-    // If you're trying to troubleshoot problems, try uncommenting the
-    // next two lines; it will show you the HTTP response headers across
-    // all the redirects:
-    // $meta = stream_get_meta_data($fp);
-    // var_dump($meta['wrapper_data']);
-    $res = stream_get_contents($fp);
-  }
-
-  if ($res === false) {
-    throw new Exception("$verb $url failed: $php_errormsg");
-  }
-
-  switch ($format) {
-    case 'json':
-      $r = json_decode($res);
-      if ($r === null) {
-        throw new Exception("failed to decode $res as json");
-      }
-      return $r;
-
-    case 'xml':
-      $r = simplexml_load_string($res);
-      if ($r === null) {
-        throw new Exception("failed to decode $res as xml");
-      }
-      return $r;
-  }
-  //return $res;
-  return json_decode($res);
-}
-
-
 function cj_init() {
-    
-    wp_register_script( 'youtube-api','http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js');
-    //wp_register_script( 'clipjet-js', 'http://static.zenvadev.com/clipjet.js');
-    wp_register_script( 'clipjet-js', plugins_url( '/clipjet.js', __FILE__ ) );
+    wp_enqueue_script('jquery');
+    wp_register_script( 'youtube-api','http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js',array('jquery'));
+    wp_register_script( 'clipjet-js', 'http://static.zenvadev.com/clipjet.js');
+    //wp_register_script( 'clipjet-js', plugins_url( '/clipjet.js', __FILE__ ), array('jquery') );
     
     
     wp_enqueue_script('youtube-api');
@@ -117,20 +50,21 @@ function cj_meta_box_add()
 function cj_meta_box_cb( $post )
 {
     //call api
-    $tags = do_get_request('http://www.clipjet.co/categories', array());
+    $tagResponse = wp_remote_get( 'http://www.clipjet.co/categories');
+    $tags = json_decode(wp_remote_retrieve_body($tagResponse), false);
     $values = get_post_custom( $post->ID );
     $selected = isset( $values['clipjet-tag'] ) ? esc_attr( $values['clipjet-tag'][0] ) : get_option('clipjet_tag');
-    	?>
-	
-	<p>
+        ?>
+    
+    <p>
             <label for="clipjet-tag">Tag</label>
             <select name="clipjet-tag" id="clipjet-tag">
                 <?php foreach($tags as $tag): ?>                    
-                    <option value="<?php echo $tag->id ?>" <?php selected( $selected, $tag->id); ?>><?php echo $tag->name ?></option>
+                    <option value="<?php echo esc_attr($tag->id); ?>" <?php selected( $selected, $tag->id); ?>><?php echo esc_attr($tag->name) ?></option>
                 <?php endforeach; ?>
             </select>
-	</p>
-	<?php	
+    </p>
+    <?php   
 }
 
 function cj_meta_box_save( $post_id )  
@@ -140,31 +74,20 @@ function cj_meta_box_save( $post_id )
          
     // if our current user can't edit this post, bail  
     if( !current_user_can( 'edit_post' ) ) return;  
-      
-    // now we can actually save the data  
-    $allowed = array(   
-        'a' => array( // on allow a tags  
-            'href' => array() // and those anchors can only have href attribute  
-        )  
-    );  
-      
+     
     if( isset( $_POST['clipjet-tag'] ) )  
         update_post_meta( $post_id, 'clipjet-tag', esc_attr( $_POST['clipjet-tag'] ) );  
-          
-    // This is purely my personal preference for saving check-boxes  
-    $chk = isset( $_POST['my_meta_box_check'] ) && $_POST['my_meta_box_select'] ? 'on' : 'off';  
-    update_post_meta( $post_id, 'my_meta_box_check', $chk );  
 }  
 
 function cj_plugin_menu() {
-	add_options_page( 'Clipjet Options', 'Clipjet', 'manage_options', 'clipjet', 'cj_plugin_options' );
+    add_options_page( 'Clipjet Options', 'Clipjet', 'manage_options', 'clipjet', 'cj_plugin_options' );
 }
 
 function cj_plugin_options() {
-	if ( !current_user_can( 'manage_options' ) )  {
-		wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
-	}
-	include('clipjet_admin_panel.php'); 
+    if ( !current_user_can( 'manage_options' ) )  {
+        wp_die( __( 'You do not have sufficient permissions to access this page.' ) );
+    }
+    include('clipjet_admin_panel.php'); 
 }
 
 function cj_admin_init() {
@@ -186,33 +109,25 @@ class ClipjetWidget extends WP_Widget {
     $tagId = get_post_meta( $post->ID, 'clipjet-tag', true ) ? get_post_meta( $post->ID, 'clipjet-tag', true ) : get_option('clipjet_tag');  
 
     if($tagId) {
-        $values = get_post_custom( $post->ID );
-        $params = array(
-            'email'       => get_option('clipjet_email'),
-            'category_id' => $tagId,
-            'country_iso' => 'US'
-        );
-
-        $response = do_get_request('http://www.clipjet.co/videos/show', $params);
+        $response = json_decode(wp_remote_retrieve_body(wp_remote_get('http://www.clipjet.co/videos/show?email='.get_option('clipjet_email').'&category_id='.$tagId.'&country_iso=US')));
         preg_match('![?&]{1}v=([^&]+)!', $response->video_url . '&', $m);    
-        $video_id = $m[1];
+        $video_id = esc_attr($m[1]);
         
         //var_dump($params); exit();
         //error_log($response->video_url);
         if(!$video_id)
             return;
         
-        $videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0&origin='.urlencode(curPageURL());
+        $videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0';
         //$videoUrl = 'http://www.youtube.com/embed/'.$video_id.'?enablejsapi=1&rel=0&showinfo=0';
-        $width = get_option('small_size_w') ? get_option('small_size_w') : 200;
-        $height = get_option('small_size_h') ? get_option('small_size_h') : 200;
+        $width = get_option('small_size_w') ? (int)get_option('small_size_w') : 200;
+        $height = get_option('small_size_h') ? (int)get_option('small_size_h') : 200;
         $out = '<div id="clipjet-hit" style="visibility:hidden;width:0px;height:0px;"></div>
-        <div id="clipjet-advertiser" style="visibility:hidden;width:0px;height:0px;">'.$response->advertiser_id.'</div>
+        <div id="clipjet-advertiser" style="visibility:hidden;width:0px;height:0px;">'.(int)$response->advertiser_id.'</div>
         <div id="clipjet-email" style="visibility:hidden;width:0px;height:0px;">'.get_option('clipjet_email').'</div>
         <div style="margin:0 auto 0 auto; width:'.$width.'px;">
             <iframe id="clipjet-video" name="clipjet-video" type="text/html" style="width:'.$width.'px;height:'.$height.'px;" src="'.$videoUrl.'" frameborder="0" allowfullscreen ;noCachePlease='.uniqid().'></iframe>
         </div>';
-        //            <iframe id="clipjet-video" type="text/html" style="width:'.$width.'px;height:'.$height.'px;" src="'.$videoUrl.'" version="3" frameborder="0" origin="'.curPageURL().'" enablejsapi="1" allowfullscreen ;noCachePlease='.uniqid().'></iframe>
 
         echo $before_widget;
         echo $before_title . $title . $after_title. $out;
@@ -221,16 +136,20 @@ class ClipjetWidget extends WP_Widget {
   }
  
   function update( $new_instance, $old_instance ) {
-    return $new_instance;
+    $instance = $old_instance;
+    $instance['title'] = strip_tags( $new_instance['title'] );
+    return $instance;
   }
  
   function form( $instance ) {
+    $defaults = array( 'title' => 'Clipjet');
+    $instance = wp_parse_args( (array) $instance, $defaults);
     $title = esc_attr( $instance['title'] );
     ?>
  
     <p>
       <label for="<?php echo $this->get_field_id( 'title' ); ?>"><?php _e( 'Title:' ); ?>
-      <input class="widefat" id="<?php echo $this->get_field_id( 'title' ); ?>" name="<?php echo $this->get_field_name( 'title' ); ?>" type="text" value="<?php echo $title; ?>" />
+      <input class="widefat" id="<?php echo $this->get_field_id( 'title' ); ?>" name="<?php echo $this->get_field_name( 'title' ); ?>" type="text" value="<?php echo esc_attr($title); ?>" />
       </label>
     </p>    
     <?php
